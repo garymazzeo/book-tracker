@@ -1,0 +1,61 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Create deployment package
+        run: |
+          # Create a temporary directory excluding sensitive files
+          mkdir -p deploy
+          rsync -av --exclude='.git' \
+            --exclude='config.php' \
+            --exclude='.gitignore' \
+            --exclude='.github' \
+            --exclude='*.md' \
+            --exclude='cron/log.txt' \
+            ./ deploy/
+      
+      - name: Deploy to VPS
+        run: |
+          # Create backup of current deployment
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "cd ${{ secrets.VPS_DEPLOY_PATH }} && tar -czf ../backup-$(date +%Y%m%d-%H%M%S).tar.gz . 2>/dev/null || true"
+          
+          # Upload files
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            deploy/ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/
+      
+      - name: Set permissions
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "cd ${{ secrets.VPS_DEPLOY_PATH }} && \
+             find . -type f -name '*.php' -exec chmod 644 {} \; && \
+             find . -type d -exec chmod 755 {} \;"
+      
+      - name: Cleanup
+        run: |
+          rm -rf deploy
+          rm -f ~/.ssh/deploy_key
+

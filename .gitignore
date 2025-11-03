@@ -4,6 +4,9 @@ config.php
 # Log files
 cron/log.txt
 
+# Backup files
+*.tar.gz
+
 # IDE files
 .vscode/
 .idea/

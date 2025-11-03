@@ -1,0 +1,24 @@
+#!/bin/bash
+# Simple rsync-based deployment script
+# Copy this to deploy.sh and update the variables below
+
+VPS_HOST="your-vps-ip-or-domain"
+VPS_USER="your-ssh-username"
+VPS_PATH="/path/to/book-tracker"  # e.g., /var/www/book-tracker or /home/username/public_html/book-tracker
+
+echo "Deploying to $VPS_HOST..."
+
+# Exclude sensitive files and directories
+rsync -avz --delete \
+  --exclude='.git' \
+  --exclude='config.php' \
+  --exclude='.gitignore' \
+  --exclude='.github' \
+  --exclude='*.md' \
+  --exclude='cron/log.txt' \
+  --exclude='*.example' \
+  ./ $VPS_USER@$VPS_HOST:$VPS_PATH/
+
+echo "Deployment complete!"
+echo "Don't forget to upload config.php manually if it's your first deployment."
+
