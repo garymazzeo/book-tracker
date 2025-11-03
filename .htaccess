@@ -1,0 +1,22 @@
+# Security: Prevent direct access to config files
+<FilesMatch "^(config|config-loader)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent access to includes directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^includes/ - [F,L]
+</IfModule>
+
+# Prevent access to sql directory
+<IfModule mod_rewrite.c>
+    RewriteRule ^sql/ - [F,L]
+</IfModule>
+
+# Prevent access to cron directory via web
+<IfModule mod_rewrite.c>
+    RewriteRule ^cron/ - [F,L]
+</IfModule>
+

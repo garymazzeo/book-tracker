@@ -1,0 +1,17 @@
+# Configuration file with sensitive data
+config.php
+
+# Log files
+cron/log.txt
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+

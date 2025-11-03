@@ -1,0 +1,25 @@
+<?php
+// Database Configuration
+// Copy this file to config.php and update with your actual credentials
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'book_tracker');
+define('DB_USER', 'your_db_user');
+define('DB_PASS', 'your_db_password');
+
+// Email Configuration
+define('FROM_EMAIL', 'noreply@yourdomain.com');
+define('FROM_NAME', 'AADL BookTracker');
+
+// Application Configuration
+define('SITE_URL', 'http://localhost'); // Update with your actual domain
+define('SESSION_LIFETIME', 86400); // 24 hours in seconds
+
+// Start session with security settings
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_secure', 0); // Set to 1 if using HTTPS
+    ini_set('session.cookie_samesite', 'Strict');
+    session_start();
+}
+
