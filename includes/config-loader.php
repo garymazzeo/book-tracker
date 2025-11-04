@@ -11,6 +11,7 @@
  */
 
 $config_paths = [
+    __DIR__ . '/../../config/config.php',  // Outside web root (recommended)
     __DIR__ . '/../config/config.php',  // Outside web root (recommended)
     __DIR__ . '/../config.php',          // In project root (fallback)
     __DIR__ . '/config.php',             // Current directory (not recommended)
