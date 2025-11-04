@@ -21,23 +21,14 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
-          # Create SSH config to force key-only authentication
-          cat > ~/.ssh/config << EOF
-          Host ${{ secrets.VPS_HOST }}
-            HostName ${{ secrets.VPS_HOST }}
-            User ${{ secrets.VPS_USER }}
-            IdentityFile ~/.ssh/deploy_key
-            IdentitiesOnly yes
-            PreferredAuthentications publickey
-            PasswordAuthentication no
-            PubkeyAuthentication yes
-            StrictHostKeyChecking no
-          EOF
-          chmod 600 ~/.ssh/config
-
       - name: Verify VPS access and permissions
         run: |
-          ssh ${{ secrets.VPS_HOST }} \
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "test -d ${{ secrets.VPS_DEPLOY_PATH }} || (mkdir -p ${{ secrets.VPS_DEPLOY_PATH }} && echo 'Directory created') && \
              test -w ${{ secrets.VPS_DEPLOY_PATH }} && echo 'Directory is writable' || (echo 'ERROR: Directory is not writable' && exit 1)"
 
@@ -56,7 +47,12 @@ jobs:
       - name: Deploy to VPS
         run: |
           # Create backup of current deployment (only if directory has files)
-          ssh ${{ secrets.VPS_HOST }} \
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "if [ -d '${{ secrets.VPS_DEPLOY_PATH }}' ] && [ \"\$(ls -A ${{ secrets.VPS_DEPLOY_PATH }} 2>/dev/null)\" ]; then \
               cd ${{ secrets.VPS_DEPLOY_PATH }} && \
               tar -czf ../backup-\$(date +%Y%m%d-%H%M%S).tar.gz . 2>/dev/null && \
@@ -67,13 +63,18 @@ jobs:
 
           # Upload files
           rsync -avz --delete \
-            -e "ssh -F ~/.ssh/config" \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o StrictHostKeyChecking=no" \
             deploy/ \
-            ${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/
 
       - name: Set permissions
         run: |
-          ssh ${{ secrets.VPS_HOST }} \
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PasswordAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
             "cd ${{ secrets.VPS_DEPLOY_PATH }} && \
              find . -type f -name '*.php' -exec chmod 644 {} \; && \
              find . -type d -exec chmod 755 {} \; && \
@@ -83,4 +84,3 @@ jobs:
         run: |
           rm -rf deploy
           rm -f ~/.ssh/deploy_key
-          rm -f ~/.ssh/config
