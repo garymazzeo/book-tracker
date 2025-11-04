@@ -69,7 +69,7 @@ function is_logged_in() {
     return isset($_SESSION['user_id']);
 }
 
-function get_current_user() {
+function get_logged_in_user() {
     if (!is_logged_in()) {
         return null;
     }
