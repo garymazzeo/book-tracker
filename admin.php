@@ -27,6 +27,21 @@ if (isset($_POST['delete_user']) && isset($_POST['user_id'])) {
 // Get all users
 $users = get_all_users();
 
+// Sort users: current user first, then by last_login (most recent first)
+$current_user_id = $_SESSION['user_id'];
+usort($users, function($a, $b) use ($current_user_id) {
+    // Current user always first
+    if ($a['id'] == $current_user_id) return -1;
+    if ($b['id'] == $current_user_id) return 1;
+    
+    // Sort by last_login: most recent first (null values go to end)
+    $a_login = $a['last_login'] ? strtotime($a['last_login']) : 0;
+    $b_login = $b['last_login'] ? strtotime($b['last_login']) : 0;
+    
+    // Most recent first (higher timestamp = more recent)
+    return $b_login - $a_login;
+});
+
 $csrf_token = generate_csrf_token();
 ?>
 <!DOCTYPE html>
