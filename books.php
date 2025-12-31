@@ -157,6 +157,9 @@ if (!empty($_POST)) {
         <h1><a href="books.php">AADL BookTracker</a></h1>
         <nav>
             <a href="dashboard.php">Dashboard</a>
+            <?php if (is_admin()): ?>
+                <a href="admin.php">Admin</a>
+            <?php endif; ?>
             <a href="auth.php?action=logout">Logout</a>
         </nav>
     </header>

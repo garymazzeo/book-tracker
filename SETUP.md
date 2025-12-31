@@ -3,13 +3,26 @@
 ## Database Setup
 
 1. Create a MySQL database:
+
    ```sql
    CREATE DATABASE book_tracker CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    ```
 
 2. Import the schema:
+
    ```bash
    mysql -u your_db_user -p book_tracker < sql/schema.sql
+   ```
+
+3. If you have an existing database, run the migration to add admin support:
+
+   ```bash
+   mysql -u your_db_user -p book_tracker < sql/migration_add_admin.sql
+   ```
+
+4. Make your first user an admin (replace with your email):
+   ```sql
+   UPDATE users SET is_admin = TRUE WHERE email = 'your-email@example.com';
    ```
 
 ## Configuration
@@ -26,6 +39,7 @@
 
 1. Copy `config.php.example` to `config.php`
 2. Edit `config.php` and update:
+
    - `DB_HOST` - Your MySQL host (usually 'localhost')
    - `DB_NAME` - Database name (default: 'book_tracker')
    - `DB_USER` - Your MySQL username
@@ -35,6 +49,7 @@
    - `SITE_URL` - Your website URL
 
 3. Upload `config.php` via SFTP (more secure than FTP) to:
+
    - **Best:** One level above web root: `../config/config.php`
    - **Good:** Same directory as other files (protected by .htaccess)
 
@@ -61,11 +76,26 @@ crontab -e
 ```
 
 Add this line (adjust the path to your installation):
+
 ```
 0 9 * * * /usr/bin/php /path/to/book-tracker/cron/daily-check.php >> /path/to/book-tracker/cron/log.txt 2>&1
 ```
 
 This will check books every day at 9 AM. You can change the time by modifying the first three numbers (minute, hour, day).
+
+## Admin Setup
+
+To create your first admin account:
+
+1. Register a regular account through the website
+2. Connect to your database and run:
+   ```sql
+   UPDATE users SET is_admin = TRUE WHERE email = 'your-email@example.com';
+   ```
+3. Log out and log back in - you'll now see an "Admin" link in the navigation
+4. Visit the Admin page to manage users and delete accounts
+
+**Note:** Only admin users can access the admin panel and delete other user accounts.
 
 ## First Use
 
@@ -73,10 +103,12 @@ This will check books every day at 9 AM. You can change the time by modifying th
 2. Register a new account
 3. Start searching for books by ISBN
 4. Books that are unavailable will be checked daily automatically
+5. Set up your admin account (see Admin Setup above)
 
 ## File Permissions
 
 Ensure the `cron/` directory is writable for log files:
+
 ```bash
 chmod 755 cron/
 ```
@@ -87,4 +119,3 @@ chmod 755 cron/
 - Verify database connection in `config.php`
 - Ensure PHP error logging is enabled to debug issues
 - Test email functionality by manually running the cron script
-

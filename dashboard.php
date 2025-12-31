@@ -183,6 +183,9 @@ foreach ($searches as $search) {
         <h1><a href="dashboard.php">AADL BookTracker</a></h1>
         <nav>
             <a href="books.php">Search Books</a>
+            <?php if (is_admin()): ?>
+                <a href="admin.php">Admin</a>
+            <?php endif; ?>
             <a href="auth.php?action=logout">Logout</a>
         </nav>
     </header>

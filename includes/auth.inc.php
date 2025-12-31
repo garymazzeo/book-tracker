@@ -38,7 +38,7 @@ function register_user($email, $password) {
 function login_user($email, $password) {
     $db = getDB();
     
-    $stmt = $db->prepare("SELECT id, email, password_hash FROM users WHERE email = ?");
+    $stmt = $db->prepare("SELECT id, email, password_hash, is_admin FROM users WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
     
@@ -53,6 +53,7 @@ function login_user($email, $password) {
     // Set session
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['user_email'] = $user['email'];
+    $_SESSION['is_admin'] = (bool)$user['is_admin'];
     
     return ['success' => true, 'message' => 'Login successful'];
 }
@@ -75,9 +76,21 @@ function get_logged_in_user() {
     }
     
     $db = getDB();
-    $stmt = $db->prepare("SELECT id, email, created_at, last_login FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT id, email, is_admin, created_at, last_login FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     return $stmt->fetch();
+}
+
+function is_admin() {
+    return isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true;
+}
+
+function require_admin() {
+    require_login();
+    if (!is_admin()) {
+        header('Location: dashboard.php');
+        exit;
+    }
 }
 
 function require_login() {
@@ -96,5 +109,38 @@ function generate_csrf_token() {
 
 function verify_csrf_token($token) {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+}
+
+function delete_user($user_id) {
+    $db = getDB();
+    
+    // Prevent deleting yourself
+    if ($user_id == $_SESSION['user_id']) {
+        return ['success' => false, 'message' => 'You cannot delete your own account'];
+    }
+    
+    // Check if user exists
+    $stmt = $db->prepare("SELECT id FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    if (!$stmt->fetch()) {
+        return ['success' => false, 'message' => 'User not found'];
+    }
+    
+    // Delete user (cascades to searches and notifications due to foreign keys)
+    try {
+        $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$user_id]);
+        return ['success' => true, 'message' => 'User deleted successfully'];
+    } catch (PDOException $e) {
+        error_log("Delete user error: " . $e->getMessage());
+        return ['success' => false, 'message' => 'Failed to delete user'];
+    }
+}
+
+function get_all_users() {
+    $db = getDB();
+    $stmt = $db->prepare("SELECT id, email, is_admin, created_at, last_login FROM users ORDER BY created_at DESC");
+    $stmt->execute();
+    return $stmt->fetchAll();
 }
 
