@@ -15,18 +15,29 @@ if (!empty($_POST)) {
     if (empty($isbn)) {
         $error = "Please enter an ISBN";
     } else {
+        $normalized_isbn = normalize_isbn($isbn);
+        if (!is_valid_isbn($normalized_isbn)) {
+            $error = "Please enter a valid ISBN-10 or ISBN-13";
+        } else {
+            $isbn = $normalized_isbn;
+        }
+    }
+
+    if (!$error) {
         // Get book info from Open Library
         $book_info = get_book_info_from_openlibrary($isbn);
         
         if (!$book_info) {
             $error = "Could not find book information for ISBN: " . htmlspecialchars($isbn);
         } else {
+            $aadl_url = get_aadl_record_url($isbn, $book_info['title'], $book_info['author']);
+            $aadl_link = $aadl_url ?: "https://aadl.org/search/catalog/{$isbn}";
             // Check availability
             $available = check_book_availability($isbn);
             
             // Save to database
             $user_id = $_SESSION['user_id'];
-            $search_id = save_or_update_search($user_id, $isbn, $book_info, $available);
+            $search_id = save_or_update_search($user_id, $isbn, $book_info, $available, $aadl_url);
             
             // If book becomes available and wasn't before, create notification record
             if ($available) {
@@ -190,7 +201,7 @@ if (!empty($_POST)) {
                     <p><strong>Author:</strong> <?= htmlspecialchars($book_info['author']) ?></p>
                     <p><strong>ISBN:</strong> <?= htmlspecialchars($isbn) ?></p>
                     <?php if ($available): ?>
-                        <p><a href="https://aadl.org/search/catalog/<?= urlencode($isbn) ?>" target="_blank">View on AADL Website →</a></p>
+                        <p><a href="<?= htmlspecialchars($aadl_link) ?>" target="_blank">View on AADL Website →</a></p>
                     <?php else: ?>
                         <p>We'll check daily and notify you when it becomes available!</p>
                     <?php endif; ?>

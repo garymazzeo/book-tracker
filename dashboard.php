@@ -6,6 +6,12 @@ require_login();
 
 $db = getDB();
 $user_id = $_SESSION['user_id'];
+$csrf_token = generate_csrf_token();
+
+$status_message = '';
+if (isset($_GET['status']) && $_GET['status'] === 'marked') {
+    $status_message = 'Marked as unavailable. We will keep checking daily.';
+}
 
 // Handle delete request
 if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
@@ -14,6 +20,32 @@ if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
     $stmt->execute([$search_id, $user_id]);
     header('Location: dashboard.php');
     exit;
+}
+
+// Handle manual unavailable override
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_unavailable'], $_POST['search_id'])) {
+    $token = $_POST['csrf_token'] ?? '';
+    if (verify_csrf_token($token)) {
+        $search_id = (int)$_POST['search_id'];
+        $stmt = $db->prepare("UPDATE searches SET available = 0, manual_unavailable = 1 WHERE id = ? AND user_id = ?");
+        $stmt->execute([$search_id, $user_id]);
+        $stmt = $db->prepare("UPDATE notifications SET notified_at = NULL WHERE search_id = ?");
+        $stmt->execute([$search_id]);
+        header('Location: dashboard.php?status=marked');
+        exit;
+    }
+}
+
+// Handle resume auto-check
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resume_autocheck'], $_POST['search_id'])) {
+    $token = $_POST['csrf_token'] ?? '';
+    if (verify_csrf_token($token)) {
+        $search_id = (int)$_POST['search_id'];
+        $stmt = $db->prepare("UPDATE searches SET manual_unavailable = 0 WHERE id = ? AND user_id = ?");
+        $stmt->execute([$search_id, $user_id]);
+        header('Location: dashboard.php');
+        exit;
+    }
 }
 
 // Get all searches for this user, ordered by available first, then by created_at
@@ -77,6 +109,14 @@ foreach ($searches as $search) {
         }
         .section {
             margin: 40px 0;
+        }
+        .status-message {
+            padding: 12px 16px;
+            background-color: #e6ffe6;
+            border: 1px solid #cfc;
+            color: #060;
+            border-radius: 4px;
+            margin: 20px 0;
         }
         .section h2 {
             margin-bottom: 20px;
@@ -160,6 +200,32 @@ foreach ($searches as $search) {
         .delete-btn:hover {
             background-color: #c82333;
         }
+        .mark-unavailable-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .mark-unavailable-btn:hover {
+            background-color: #c82333;
+        }
+        .resume-autocheck-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .resume-autocheck-btn:hover {
+            background-color: #0056b3;
+        }
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -190,6 +256,10 @@ foreach ($searches as $search) {
         </nav>
     </header>
 
+    <?php if ($status_message): ?>
+        <div class="status-message"><?= htmlspecialchars($status_message) ?></div>
+    <?php endif; ?>
+
     <div class="section available-section">
         <h2>Available Books (<?= count($available_books) ?>)</h2>
         <?php if (empty($available_books)): ?>
@@ -207,7 +277,13 @@ foreach ($searches as $search) {
                             <h3><?= htmlspecialchars($book['title']) ?></h3>
                             <p><strong>Author:</strong> <?= htmlspecialchars($book['author']) ?></p>
                             <p><strong>ISBN:</strong> <?= htmlspecialchars($book['isbn']) ?></p>
-                            <p><a href="https://aadl.org/search/catalog/<?= urlencode($book['isbn']) ?>" target="_blank">View on AADL Website →</a></p>
+                            <?php $aadl_link = $book['aadl_url'] ?: "https://aadl.org/search/catalog/{$book['isbn']}"; ?>
+                            <p><a href="<?= htmlspecialchars($aadl_link) ?>" target="_blank">View on AADL Website →</a></p>
+                            <form method="post" style="display: inline;" onsubmit="return confirm('Mark this book as unavailable? This will move it back to the unavailable list and pause notifications until it becomes available again.');">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                <input type="hidden" name="search_id" value="<?= htmlspecialchars($book['id']) ?>">
+                                <button type="submit" name="mark_unavailable" class="mark-unavailable-btn">Mark Unavailable</button>
+                            </form>
                             <?php if ($book['notified_at']): ?>
                                 <p class="notified">✓ Notified: <?= date('M j, Y g:i A', strtotime($book['notified_at'])) ?></p>
                             <?php endif; ?>
@@ -237,6 +313,13 @@ foreach ($searches as $search) {
                             <p><strong>Author:</strong> <?= htmlspecialchars($book['author']) ?></p>
                             <p><strong>ISBN:</strong> <?= htmlspecialchars($book['isbn']) ?></p>
                             <p>We'll check daily and email you when available!</p>
+                            <?php if (!empty($book['manual_unavailable'])): ?>
+                                <form method="post" style="display: inline;" onsubmit="return confirm('Resume auto-check for this book?');">
+                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                                    <input type="hidden" name="search_id" value="<?= htmlspecialchars($book['id']) ?>">
+                                    <button type="submit" name="resume_autocheck" class="resume-autocheck-btn">Resume auto-check</button>
+                                </form>
+                            <?php endif; ?>
                             <p class="last-checked">Last checked: <?= date('M j, Y g:i A', strtotime($book['last_checked'])) ?></p>
                         </div>
                     </div>

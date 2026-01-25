@@ -56,11 +56,26 @@ foreach ($searches as $search) {
     $user_id = $search['user_id'];
     $user_email = $search['email'];
     
+    $normalized_isbn = normalize_isbn($isbn);
+    if (!is_valid_isbn($normalized_isbn)) {
+        $errors++;
+        log_message("ERROR: Invalid ISBN '{$isbn}' for user {$user_email}");
+        continue;
+    }
+    if ($normalized_isbn !== $isbn) {
+        $isbn = $normalized_isbn;
+        $fix_stmt = $db->prepare("UPDATE searches SET isbn = ? WHERE id = ?");
+        $fix_stmt->execute([$isbn, $search['id']]);
+    }
+    
     log_message("Checking ISBN {$isbn} for user {$user_email}");
     
     try {
         // Check availability
         $available = check_book_availability($isbn);
+        if (!empty($search['manual_unavailable'])) {
+            $available = false;
+        }
         
         // Get book info (in case it's missing or updated)
         $book_info = get_book_info_from_openlibrary($isbn);
@@ -75,16 +90,20 @@ foreach ($searches as $search) {
             ];
         }
         
+        $aadl_url = get_aadl_record_url($isbn, $book_info['title'], $book_info['author']);
+
         // Update search record
         $update_stmt = $db->prepare("
             UPDATE searches 
-            SET title = ?, author = ?, cover_url = ?, available = ?, last_checked = CURRENT_TIMESTAMP 
+            SET title = ?, author = ?, cover_url = ?, aadl_url = ?, available = ?, manual_unavailable = IF(?, 0, manual_unavailable), last_checked = CURRENT_TIMESTAMP 
             WHERE id = ?
         ");
         $update_stmt->execute([
             $book_info['title'],
             $book_info['author'],
             $book_info['cover_url'],
+            $aadl_url,
+            $available ? 1 : 0,
             $available ? 1 : 0,
             $search['id']
         ]);
@@ -95,7 +114,7 @@ foreach ($searches as $search) {
             log_message("Book {$isbn} is now AVAILABLE - sending notification to {$user_email}");
             
             // Send email notification
-            $email_sent = send_availability_notification($user_email, $book_info, $isbn);
+            $email_sent = send_availability_notification($user_email, $book_info, $isbn, $aadl_url);
             
             if ($email_sent) {
                 $notifications_sent++;

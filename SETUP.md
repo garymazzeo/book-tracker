@@ -20,7 +20,13 @@
    mysql -u your_db_user -p book_tracker < sql/migration_add_admin.sql
    ```
 
-4. Make your first user an admin (replace with your email):
+4. If you have an existing database, run the migration to add AADL URL and manual override support:
+
+   ```bash
+   mysql -u your_db_user -p book_tracker < sql/migration_add_aadl_override.sql
+   ```
+
+5. Make your first user an admin (replace with your email):
    ```sql
    UPDATE users SET is_admin = TRUE WHERE email = 'your-email@example.com';
    ```
@@ -104,6 +110,16 @@ To create your first admin account:
 3. Start searching for books by ISBN
 4. Books that are unavailable will be checked daily automatically
 5. Set up your admin account (see Admin Setup above)
+
+## Manual Override (False Availability)
+
+If a book is incorrectly marked as available, you can fix it:
+
+1. Go to your Dashboard
+2. Find the book in the Available section
+3. Click “Mark Unavailable”
+
+This moves it back to the Unavailable section and prevents notifications until a future check marks it available again.
 
 ## File Permissions
 
