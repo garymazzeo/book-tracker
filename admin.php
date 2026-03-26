@@ -12,7 +12,7 @@ if (isset($_POST['delete_user']) && isset($_POST['user_id'])) {
     $csrf_token = $_POST['csrf_token'] ?? '';
     
     if (!verify_csrf_token($csrf_token)) {
-        $error = 'Invalid security token. Please try again.';
+        $error = 'This page expired. Refresh and try again.';
     } else {
         $user_id = (int)$_POST['user_id'];
         $result = delete_user($user_id);
@@ -50,179 +50,68 @@ $csrf_token = generate_csrf_token();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - User Management - AADL BookTracker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-        h1 {
-            margin: 0;
-        }
-        h1 a {
-            color: inherit;
-            text-decoration: none;
-        }
-        nav a {
-            margin-left: 15px;
-            color: #007bff;
-            text-decoration: none;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-        .alert {
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .alert-error {
-            background-color: #ffe6e6;
-            color: #c00;
-            border: 1px solid #fcc;
-        }
-        .alert-success {
-            background-color: #e6ffe6;
-            color: #060;
-            border: 1px solid #cfc;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-        tr:hover {
-            background-color: #f9f9f9;
-        }
-        .badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .badge-admin {
-            background-color: #ff6b6b;
-            color: white;
-        }
-        .badge-user {
-            background-color: #6c757d;
-            color: white;
-        }
-        .btn-delete {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .btn-delete:hover {
-            background-color: #c82333;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-style: italic;
-        }
-        .stats {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            flex: 1;
-            padding: 20px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .stat-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
-            color: #666;
-        }
-        .stat-card .number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #007bff;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/app-layout.css">
 </head>
 <body>
-    <header>
-        <h1><a href="dashboard.php">AADL BookTracker</a> - Admin</h1>
+    <div class="page-shell page-shell--wide admin-page">
+    <header class="site-header">
+        <h1 class="site-header__title"><a href="dashboard.php">AADL BookTracker</a> <span class="site-header__suffix">Admin</span></h1>
         <nav>
-            <a href="dashboard.php">Dashboard</a>
-            <a href="books.php">Search Books</a>
-            <a href="auth.php?action=logout">Logout</a>
+            <ul class="site-nav">
+                <li><a href="dashboard.php">Dashboard</a></li>
+                <li><a href="books.php">Look up</a></li>
+                <li><a href="auth.php?action=logout">Logout</a></li>
+            </ul>
         </nav>
     </header>
 
-    <h2>User Management</h2>
+    <main>
+    <h2>User management</h2>
 
     <?php if ($error): ?>
-        <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert--error" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <?php if ($success): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
+        <div class="alert alert--success" role="status" aria-live="polite"><?= htmlspecialchars($success) ?></div>
     <?php endif; ?>
 
-    <div class="stats">
-        <div class="stat-card">
-            <h3>Total Users</h3>
-            <div class="number"><?= count($users) ?></div>
+    <div class="admin-stats">
+        <div class="admin-stat">
+            <h3>Total users</h3>
+            <p class="number"><?= count($users) ?></p>
         </div>
-        <div class="stat-card">
-            <h3>Admin Users</h3>
-            <div class="number"><?= count(array_filter($users, fn($u) => $u['is_admin'])) ?></div>
+        <div class="admin-stat">
+            <h3>Admins</h3>
+            <p class="number"><?= count(array_filter($users, fn($u) => $u['is_admin'])) ?></p>
         </div>
-        <div class="stat-card">
-            <h3>Regular Users</h3>
-            <div class="number"><?= count(array_filter($users, fn($u) => !$u['is_admin']))?></div>
+        <div class="admin-stat">
+            <h3>Members</h3>
+            <p class="number"><?= count(array_filter($users, fn($u) => !$u['is_admin']))?></p>
         </div>
     </div>
 
     <?php if (empty($users)): ?>
-        <div class="empty-state">No users found.</div>
+        <div class="empty-state">No accounts yet.</div>
     <?php else: ?>
-        <table>
+        <div class="admin-table-wrap">
+        <table class="admin-table">
+            <caption><span class="sr-only">Registered accounts</span></caption>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Created</th>
-                    <th>Last Login</th>
-                    <th>Actions</th>
+                    <th scope="col">ID</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Created</th>
+                    <th scope="col">Last login</th>
+                    <th scope="col">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
                     <tr>
                         <td><?= htmlspecialchars($user['id']) ?></td>
-                        <td><?= htmlspecialchars($user['email']) ?></td>
+                        <td class="admin-table__cell--email" title="<?= htmlspecialchars($user['email'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($user['email']) ?></td>
                         <td>
                             <?php if ($user['is_admin']): ?>
                                 <span class="badge badge-admin">Admin</span>
@@ -240,10 +129,10 @@ $csrf_token = generate_csrf_token();
                         </td>
                         <td>
                             <?php if ($user['id'] != $_SESSION['user_id']): ?>
-                                <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete user <?= htmlspecialchars($user['email']) ?>? This will also delete all their book searches. This action cannot be undone.');">
+                                <form class="admin-table__delete-form" method="post" onsubmit="return confirm(<?= htmlspecialchars(json_encode('Are you sure you want to delete user ' . $user['email'] . '? This will also delete all their book searches. This action cannot be undone.'), ENT_QUOTES, 'UTF-8') ?>);">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="user_id" value="<?= htmlspecialchars($user['id']) ?>">
-                                    <button type="submit" name="delete_user" class="btn-delete">Delete</button>
+                                    <button type="submit" name="delete_user" class="btn btn--danger">Delete</button>
                                 </form>
                             <?php else: ?>
                                 <em>Current user</em>
@@ -253,7 +142,10 @@ $csrf_token = generate_csrf_token();
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     <?php endif; ?>
+    </main>
+    </div>
 </body>
 </html>
 

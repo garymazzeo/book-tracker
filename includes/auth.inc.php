@@ -6,7 +6,7 @@ function register_user($email, $password) {
     
     // Validate email
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        return ['success' => false, 'message' => 'Invalid email address'];
+        return ['success' => false, 'message' => 'Enter a valid email address (for example, name@gmail.com).'];
     }
     
     // Validate password
@@ -18,7 +18,7 @@ function register_user($email, $password) {
     $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
-        return ['success' => false, 'message' => 'Email already registered'];
+        return ['success' => false, 'message' => 'That email already has an account. Try logging in instead.'];
     }
     
     // Hash password
@@ -31,7 +31,7 @@ function register_user($email, $password) {
         return ['success' => true, 'message' => 'Registration successful'];
     } catch (PDOException $e) {
         error_log("Registration error: " . $e->getMessage());
-        return ['success' => false, 'message' => 'Registration failed. Please try again.'];
+        return ['success' => false, 'message' => 'We couldn’t create your account. Try again in a moment.'];
     }
 }
 
@@ -43,7 +43,7 @@ function login_user($email, $password) {
     $user = $stmt->fetch();
     
     if (!$user || !password_verify($password, $user['password_hash'])) {
-        return ['success' => false, 'message' => 'Invalid email or password'];
+        return ['success' => false, 'message' => 'That email and password didn’t work. Check for typos and try again.'];
     }
     
     // Update last login
@@ -116,24 +116,24 @@ function delete_user($user_id) {
     
     // Prevent deleting yourself
     if ($user_id == $_SESSION['user_id']) {
-        return ['success' => false, 'message' => 'You cannot delete your own account'];
+        return ['success' => false, 'message' => 'You can’t delete your own account here.'];
     }
     
     // Check if user exists
     $stmt = $db->prepare("SELECT id FROM users WHERE id = ?");
     $stmt->execute([$user_id]);
     if (!$stmt->fetch()) {
-        return ['success' => false, 'message' => 'User not found'];
+        return ['success' => false, 'message' => 'That account no longer exists. Refresh the page.'];
     }
     
     // Delete user (cascades to searches and notifications due to foreign keys)
     try {
         $stmt = $db->prepare("DELETE FROM users WHERE id = ?");
         $stmt->execute([$user_id]);
-        return ['success' => true, 'message' => 'User deleted successfully'];
+        return ['success' => true, 'message' => 'Account removed. Their book watches were deleted too.'];
     } catch (PDOException $e) {
         error_log("Delete user error: " . $e->getMessage());
-        return ['success' => false, 'message' => 'Failed to delete user'];
+        return ['success' => false, 'message' => 'Couldn’t remove that account. Try again.'];
     }
 }
 

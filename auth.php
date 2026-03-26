@@ -12,9 +12,9 @@ if ($action === 'register') {
     $csrf_token = $_POST['csrf_token'] ?? '';
     
     if (!verify_csrf_token($csrf_token)) {
-        $error = 'Invalid security token. Please try again.';
+        $error = 'This page expired. Refresh and try again.';
     } elseif ($password !== $confirm_password) {
-        $error = 'Passwords do not match';
+        $error = 'Those passwords don’t match. Re-enter them in both fields.';
     } else {
         $result = register_user($email, $password);
         if ($result['success']) {
@@ -40,7 +40,7 @@ if ($action === 'login') {
     $csrf_token = $_POST['csrf_token'] ?? '';
     
     if (!verify_csrf_token($csrf_token)) {
-        $error = 'Invalid security token. Please try again.';
+        $error = 'This page expired. Refresh and try again.';
     } else {
         $result = login_user($email, $password);
         if ($result['success']) {

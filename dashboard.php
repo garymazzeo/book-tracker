@@ -10,7 +10,10 @@ $csrf_token = generate_csrf_token();
 
 $status_message = '';
 if (isset($_GET['status']) && $_GET['status'] === 'marked') {
-    $status_message = 'Marked as unavailable. We will keep checking daily.';
+    $status_message = 'Moved to your waiting list. We’ll email you when it shows up in the catalog.';
+}
+if (isset($_GET['status']) && $_GET['status'] === 'resumed') {
+    $status_message = 'Daily checks are on again—we’ll email you when this book is in the catalog.';
 }
 
 // Handle delete request
@@ -43,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['resume_autocheck'], $
         $search_id = (int)$_POST['search_id'];
         $stmt = $db->prepare("UPDATE searches SET manual_unavailable = 0 WHERE id = ? AND user_id = ?");
         $stmt->execute([$search_id, $user_id]);
-        header('Location: dashboard.php');
+        header('Location: dashboard.php?status=resumed');
         exit;
     }
 }
@@ -77,265 +80,112 @@ foreach ($searches as $search) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - AADL BookTracker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-        }
-        h1 {
-            margin: 0;
-        }
-        h1 a {
-            color: inherit;
-            text-decoration: none;
-        }
-        nav a {
-            margin-left: 15px;
-            color: #007bff;
-            text-decoration: none;
-        }
-        nav a:hover {
-            text-decoration: underline;
-        }
-        .section {
-            margin: 40px 0;
-        }
-        .status-message {
-            padding: 12px 16px;
-            background-color: #e6ffe6;
-            border: 1px solid #cfc;
-            color: #060;
-            border-radius: 4px;
-            margin: 20px 0;
-        }
-        .section h2 {
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ddd;
-        }
-        .available-section h2 {
-            color: #28a745;
-            border-bottom-color: #28a745;
-        }
-        .unavailable-section h2 {
-            color: #dc3545;
-            border-bottom-color: #dc3545;
-        }
-        .book-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .book-card {
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            display: flex;
-            gap: 15px;
-            position: relative;
-        }
-        .book-card.available {
-            border-color: #28a745;
-            background-color: #f0fff4;
-        }
-        .book-card.unavailable {
-            border-color: #dc3545;
-            background-color: #fff0f0;
-        }
-        .book-card img {
-            max-width: 100px;
-            height: auto;
-            flex-shrink: 0;
-        }
-        .book-details {
-            flex: 1;
-        }
-        .book-details h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-        .book-details p {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .status-badge.available {
-            background-color: #28a745;
-            color: white;
-        }
-        .status-badge.unavailable {
-            background-color: #dc3545;
-            color: white;
-        }
-        .delete-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .delete-btn:hover {
-            background-color: #c82333;
-        }
-        .mark-unavailable-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-        .mark-unavailable-btn:hover {
-            background-color: #c82333;
-        }
-        .resume-autocheck-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-top: 8px;
-        }
-        .resume-autocheck-btn:hover {
-            background-color: #0056b3;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-style: italic;
-        }
-        .last-checked {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .notified {
-            font-size: 12px;
-            color: #28a745;
-            margin-top: 5px;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/app-layout.css">
 </head>
 <body>
-    <header>
-        <h1><a href="dashboard.php">AADL BookTracker</a></h1>
+    <div class="page-shell page-shell--wide">
+    <header class="site-header">
+        <h1 class="site-header__title"><a href="dashboard.php">AADL BookTracker</a></h1>
         <nav>
-            <a href="books.php">Search Books</a>
-            <?php if (is_admin()): ?>
-                <a href="admin.php">Admin</a>
-            <?php endif; ?>
-            <a href="auth.php?action=logout">Logout</a>
+            <ul class="site-nav">
+                <li><a href="books.php">Look up</a></li>
+                <?php if (is_admin()): ?>
+                    <li><a href="admin.php">Admin</a></li>
+                <?php endif; ?>
+                <li><a href="auth.php?action=logout">Logout</a></li>
+            </ul>
         </nav>
     </header>
 
+    <main>
     <?php if ($status_message): ?>
-        <div class="status-message"><?= htmlspecialchars($status_message) ?></div>
+        <div class="status-banner" role="status" aria-live="polite"><?= htmlspecialchars($status_message) ?></div>
     <?php endif; ?>
 
-    <div class="section available-section">
-        <h2>Available Books (<?= count($available_books) ?>)</h2>
+    <section class="section section--available" aria-labelledby="heading-available">
+        <h2 id="heading-available" class="section__heading">Available (<?= count($available_books) ?>)</h2>
         <?php if (empty($available_books)): ?>
-            <div class="empty-state">No available books yet. Check for books using the search above!</div>
+            <div class="empty-state">Nothing here yet. <a href="books.php">Look up a book by ISBN</a> to add one.</div>
         <?php else: ?>
-            <div class="book-list">
+            <div class="book-grid">
                 <?php foreach ($available_books as $book): ?>
-                    <div class="book-card available">
-                        <button class="delete-btn" onclick="if(confirm('Remove this book from your list?')) window.location='dashboard.php?delete=<?= $book['id'] ?>'">×</button>
-                        <?php if ($book['cover_url']): ?>
-                            <img src="<?= htmlspecialchars($book['cover_url']) ?>" alt="<?= htmlspecialchars($book['title']) ?>">
-                        <?php endif; ?>
-                        <div class="book-details">
-                            <span class="status-badge available">Available</span>
-                            <h3><?= htmlspecialchars($book['title']) ?></h3>
-                            <p><strong>Author:</strong> <?= htmlspecialchars($book['author']) ?></p>
-                            <p><strong>ISBN:</strong> <?= htmlspecialchars($book['isbn']) ?></p>
-                            <?php $aadl_link = $book['aadl_url'] ?: "https://aadl.org/search/catalog/{$book['isbn']}"; ?>
-                            <p><a href="<?= htmlspecialchars($aadl_link) ?>" target="_blank">View on AADL Website →</a></p>
-                            <form method="post" style="display: inline;" onsubmit="return confirm('Mark this book as unavailable? This will move it back to the unavailable list and pause notifications until it becomes available again.');">
+                    <?php $aadl_link = $book['aadl_url'] ?: "https://aadl.org/search/catalog/{$book['isbn']}"; ?>
+                    <article class="book-card book-card--available">
+                        <button type="button" class="book-card__remove" title="Remove" aria-label="Remove from list" onclick="if(confirm('Remove this book from your list?')) window.location='dashboard.php?delete=<?= (int)$book['id'] ?>'">×</button>
+                        <div class="book-card__main">
+                            <?php if ($book['cover_url']): ?>
+                                <div class="book-card__cover">
+                                    <img src="<?= htmlspecialchars($book['cover_url']) ?>" alt="" loading="lazy" decoding="async">
+                                </div>
+                            <?php endif; ?>
+                            <div class="book-card__body">
+                                <h3 class="book-card__title"><?= htmlspecialchars($book['title']) ?></h3>
+                                <p class="book-card__meta"><?= htmlspecialchars($book['author']) ?> · <?= htmlspecialchars($book['isbn']) ?></p>
+                                <p class="book-card__meta-muted"><?php
+                                    $parts = ['Checked ' . date('M j, g:i A', strtotime($book['last_checked']))];
+                                    if ($book['notified_at']) {
+                                        $parts[] = 'Emailed ' . date('M j', strtotime($book['notified_at']));
+                                    }
+                                    echo htmlspecialchars(implode(' · ', $parts));
+                                ?></p>
+                            </div>
+                        </div>
+                        <div class="book-card__actions book-card__actions--inline">
+                            <a class="btn btn--primary" href="<?= htmlspecialchars($aadl_link) ?>" target="_blank" rel="noopener">Open in catalog</a>
+                            <form method="post" class="book-card__inline-form" onsubmit="return confirm('Move this book to your waiting list? We’ll keep checking the catalog for you.');">
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                 <input type="hidden" name="search_id" value="<?= htmlspecialchars($book['id']) ?>">
-                                <button type="submit" name="mark_unavailable" class="mark-unavailable-btn">Mark Unavailable</button>
+                                <button type="submit" name="mark_unavailable" class="btn btn--ghost">Move to waiting list</button>
                             </form>
-                            <?php if ($book['notified_at']): ?>
-                                <p class="notified">✓ Notified: <?= date('M j, Y g:i A', strtotime($book['notified_at'])) ?></p>
-                            <?php endif; ?>
-                            <p class="last-checked">Last checked: <?= date('M j, Y g:i A', strtotime($book['last_checked'])) ?></p>
                         </div>
-                    </div>
+                    </article>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-    </div>
+    </section>
 
-    <div class="section unavailable-section">
-        <h2>Unavailable Books - Checking Daily (<?= count($unavailable_books) ?>)</h2>
+    <section class="section section--unavailable" aria-labelledby="heading-unavailable">
+        <h2 id="heading-unavailable" class="section__heading">Waiting (<?= count($unavailable_books) ?>)</h2>
         <?php if (empty($unavailable_books)): ?>
-            <div class="empty-state">No unavailable books being tracked.</div>
+            <div class="empty-state">You’re not waiting on any books yet.</div>
         <?php else: ?>
-            <div class="book-list">
+            <div class="book-grid">
                 <?php foreach ($unavailable_books as $book): ?>
-                    <div class="book-card unavailable">
-                        <button class="delete-btn" onclick="if(confirm('Stop tracking this book?')) window.location='dashboard.php?delete=<?= $book['id'] ?>'">×</button>
-                        <?php if ($book['cover_url']): ?>
-                            <img src="<?= htmlspecialchars($book['cover_url']) ?>" alt="<?= htmlspecialchars($book['title']) ?>">
-                        <?php endif; ?>
-                        <div class="book-details">
-                            <span class="status-badge unavailable">Not Available</span>
-                            <h3><?= htmlspecialchars($book['title']) ?></h3>
-                            <p><strong>Author:</strong> <?= htmlspecialchars($book['author']) ?></p>
-                            <p><strong>ISBN:</strong> <?= htmlspecialchars($book['isbn']) ?></p>
-                            <p>We'll check daily and email you when available!</p>
-                            <?php if (!empty($book['manual_unavailable'])): ?>
-                                <form method="post" style="display: inline;" onsubmit="return confirm('Resume auto-check for this book?');">
+                    <article class="book-card book-card--unavailable">
+                        <button type="button" class="book-card__remove" title="Remove" aria-label="Stop tracking" onclick="if(confirm('Stop tracking this book and remove it from your list?')) window.location='dashboard.php?delete=<?= (int)$book['id'] ?>'">×</button>
+                        <div class="book-card__main">
+                            <?php if ($book['cover_url']): ?>
+                                <div class="book-card__cover">
+                                    <img src="<?= htmlspecialchars($book['cover_url']) ?>" alt="" loading="lazy" decoding="async">
+                                </div>
+                            <?php endif; ?>
+                            <div class="book-card__body">
+                                <h3 class="book-card__title"><?= htmlspecialchars($book['title']) ?></h3>
+                                <p class="book-card__meta"><?= htmlspecialchars($book['author']) ?> · <?= htmlspecialchars($book['isbn']) ?></p>
+                                <p class="book-card__meta-muted">Checked <?= date('M j, g:i A', strtotime($book['last_checked'])) ?></p>
+                                <?php if (!empty($book['manual_unavailable'])): ?>
+                                    <p class="book-card__hint">Paused — resume to keep checking.</p>
+                                <?php else: ?>
+                                    <p class="book-card__hint">We’ll email you when it appears in the catalog.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php if (!empty($book['manual_unavailable'])): ?>
+                            <div class="book-card__actions book-card__actions--inline">
+                                <form method="post" onsubmit="return confirm('Turn daily catalog checks back on for this book?');">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
                                     <input type="hidden" name="search_id" value="<?= htmlspecialchars($book['id']) ?>">
-                                    <button type="submit" name="resume_autocheck" class="resume-autocheck-btn">Resume auto-check</button>
+                                    <button type="submit" name="resume_autocheck" class="btn btn--secondary">Resume checks</button>
                                 </form>
-                            <?php endif; ?>
-                            <p class="last-checked">Last checked: <?= date('M j, Y g:i A', strtotime($book['last_checked'])) ?></p>
-                        </div>
-                    </div>
+                            </div>
+                        <?php endif; ?>
+                    </article>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+    </section>
+    </main>
     </div>
-
-    <?php if (empty($available_books) && empty($unavailable_books)): ?>
-        <div class="section">
-            <div class="empty-state">
-                <p>You haven't searched for any books yet.</p>
-                <p><a href="books.php">Start searching for books →</a></p>
-            </div>
-        </div>
-    <?php endif; ?>
 </body>
 </html>
 

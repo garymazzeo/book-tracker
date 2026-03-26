@@ -19,75 +19,21 @@ $csrf_token = generate_csrf_token();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AADL BookTracker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        label {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        input[type="email"],
-        input[type="password"] {
-            padding: 8px;
-            font-size: 16px;
-        }
-        button {
-            padding: 10px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .error {
-            color: red;
-            padding: 10px;
-            background-color: #ffe6e6;
-            border-radius: 4px;
-        }
-        .success {
-            color: green;
-            padding: 10px;
-            background-color: #e6ffe6;
-            border-radius: 4px;
-        }
-        .links {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .links a {
-            color: #007bff;
-            text-decoration: none;
-        }
-    </style>
+    <title>Log in - AADL BookTracker</title>
+    <link rel="stylesheet" href="assets/app-layout.css">
 </head>
 <body>
+    <main class="auth-page">
+    <div class="auth-card">
     <h1>AADL BookTracker</h1>
-    <h2>Login</h2>
+    <h2>Log in</h2>
     
     <?php if ($registered): ?>
-        <div class="success">Registration successful! Please log in.</div>
+        <div class="alert alert--success" role="status" aria-live="polite">Account created. Log in with your email and password.</div>
     <?php endif; ?>
     
     <?php if ($error): ?>
-        <div class="error"><?= htmlspecialchars($error) ?></div>
+        <div class="alert alert--error" role="alert"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
     
     <form action="auth.php" method="post">
@@ -95,21 +41,23 @@ $csrf_token = generate_csrf_token();
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
         
         <label>
-            Email:
-            <input type="email" name="email" required>
+            Email
+            <input type="email" name="email" id="login-email" required autocomplete="username">
         </label>
         
         <label>
-            Password:
-            <input type="password" name="password" required>
+            Password
+            <input type="password" name="password" id="login-password" required autocomplete="current-password">
         </label>
         
-        <button type="submit">Login</button>
+        <button type="submit">Log in</button>
     </form>
     
     <div class="links">
-        <a href="register.php">Don't have an account? Register</a>
+        <a href="register.php">Create an account</a>
     </div>
+    </div>
+    </main>
 </body>
 </html>
 

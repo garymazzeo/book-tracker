@@ -7,6 +7,9 @@ cron/log.txt
 # Backup files
 *.tar.gz
 
+# Node (Fontsource — run npm install && npm run sync-fonts to refresh assets/fonts)
+node_modules/
+
 # IDE files
 .vscode/
 .idea/
